@@ -40,7 +40,7 @@ class LadaOutput
 	 * --
 	 * @return string
 	 */
-	public function asExample($pre=false)
+	public function asExample($pre=true)
 	{
 		$code = str_replace(
 			"\n", 

@@ -54,6 +54,9 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 			# Register standard HTML tags
 			'/(^[\.#a-z]+[a-z0-9]*)(.*)/' => array($this, 'htmlTag'),
 			
+			# PHP tags
+			'/(^[\-|=] )(.*)/' => array($this, 'phpTag'),
+
 			# DOCTYPE tag
 			'/^!doctype(.*)/i' => array($this, 'docType'),
 		);
@@ -74,6 +77,63 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 	}
 
 	/**
+	 * Resolve PHP tag
+	 * --
+	 * @param  array $match
+	 * --
+	 * @return array
+	 */
+	public function phpTag($match)
+	{
+		# Assign match to tag
+		$tag = $match[0];
+
+		# Do we have simple tag?
+		if (substr($tag, 0, 1) === '=') {
+			return $this->phpReturner('echo ' . substr($tag, 2));
+		}
+
+		# Do we have else?
+		if (substr($tag, 0, 6) === '- else') {
+			return $this->phpReturner('else {', '}');
+		}
+
+		# Process furthermore
+		if (preg_match(
+				'/^- (if|foreach|for|dowhile|do while|else if|elseif|elif) (.+)/i', 
+				$tag, $match) !== false) {
+			if ($match[1] === 'dowhile' || $match[1] === 'do while') {
+				return $this->phpReturner('do {', '} while(' . $match[2] . ');');
+			}
+			else {
+				if ($match[1] === 'elif') {
+					$match[1] = 'else if';
+				}
+				return $this->phpReturner($match[1] . ' (' . $match[2] . ') {', '}');
+			}
+		}
+
+		# Regular tag perhaps?
+		return $this->phpReturner(substr($tag, 2).';');
+	}
+
+	/**
+	 * Return properly formatter array. PHP helper
+	 * --
+	 * @param  string $phpTag
+	 * --
+	 * @return array
+	 */
+	protected function phpReturner($phpTag, $endTag=false)
+	{
+		return array(
+			'open'   => '<?php ' . $phpTag . ' ?>',
+			'end'    => '<?php ' . $endTag . ' ?>',
+			'ignore' => false
+		);
+	}
+
+	/**
 	 * Resolve HTML tag
 	 * --
 	 * @param	array	$match
@@ -89,12 +149,19 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 		$tag = preg_replace_callback('/"(.*?)"/', array($this, 'encodeQuotes'), $tag);
 
 		# Encode any scripts calls
-		$tag = preg_replace_callback('/{(.*?)}/', array($this, 'encodeScript'), $tag);
+		$tag = preg_replace_callback('/(?<!\\\){(.+)(?<!\\\)}/', array($this, 'encodeScript'), $tag);
 
 		# Now we can break it at first space (if exists)
 		$tagToTwo = explode(' ', $tag, 2);
 		$tagSelf = $tagToTwo[0];
 		$tagText = isset($tagToTwo[1]) ? $tagToTwo[1] : null;
+
+		# Check if we have such notation > perhaps
+		if (substr($tagText, 0, 2) === '> ') {
+			$tagText = substr($tagText, 2);
+			$tagText = $this->htmlTag(array($tagText));
+			$tagText = $tagText['open'] . $tagText['end'];
+		}
 
 		# Get pure tag now
 		if (in_array(substr($tagSelf, 0, 1), array('.', '#'))) {
@@ -104,7 +171,7 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 			$pureTag = $match[0];
 		}
 		else {
-			throw new LadaException('Invalid tag defintion: ' . $tag, 1);
+			throw new LadaException('Invalid tag definition: ' . $tag, 1);
 		}
 
 		# Get classes
@@ -122,17 +189,22 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 		if ($id)      $attr[] = $id;
 		$attr = implode(' ', $attr);
 
-		# Restore attributes now
+		# Restore attributes now...
 		$attr = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $attr);
 		$attr = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScript'), $attr);
+
+		# ... and tag text!
+		$tagText = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $tagText);
+		$tagText = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScript'), $tagText);
 
 		# Build tag
 		$finalTag = '<' . $pureTag . ($attr ? ' ' . $attr : '') . (in_array($pureTag, $this->selfClosingTags) ? ' />' : '>' . $tagText);
 
 		# Finally return tag
 		return array(
-			'open' => $finalTag,
-			'end'  => (in_array($pureTag, $this->selfClosingTags) ? false : '</' . $pureTag . '>')
+			'open'   => $finalTag,
+			'end'    => (in_array($pureTag, $this->selfClosingTags) ? false : '</' . $pureTag . '>'),
+			'ignore' => in_array($pureTag, $this->ignoreContentTags) ? true : false
 		);
 	}
 

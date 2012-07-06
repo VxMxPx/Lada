@@ -8,7 +8,7 @@ include('../lada/lada.php');
 
 try {
 	$Lada = new Avrelia\Lada();
-	$html = $Lada->fromFile('./sample-1.lada');
+	$html = $Lada->fromFile('./sample-2.lada');
 	echo $html->asExample();
 	# echo $html->asString();
 }

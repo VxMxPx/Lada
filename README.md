@@ -32,7 +32,7 @@ html
 		h1 Hi there, how are you?
 		h2
 			- if $name
-				= "Hi there {$name}!"
+				= Hi there {$name}!
 			- else
 				I don't know who are you... :O
 		

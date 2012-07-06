@@ -1,0 +1,28 @@
+!DOCTYPE html
+html
+	head
+		meta:charset="utf-8"
+		link:rel="icon":type="image+png":href="http://avrelia.com/theme/favicon.png"
+		title Hello From Simple Lada!
+		style
+			h1 { color: #440; background: #ee8; }
+			.red { color: red; }
+	body
+		h1#big \
+		Hello world!
+		p.red How are you today? :)
+		a.red.blue:href="http://google.com" Google
+		a.big:href={url('hello_world')}:title="Sample website example" Hi there!
+		pre\\
+			Hi there! :)
+					  It's a nice day
+			Some more text in here!! :)
+		ul
+			li > a:href="#" > span.red Hello world
+			li > a:href="#" Two
+			li > a:href="#" Three
+		script:src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"
+		script
+			$('h1').on('click', function() {
+				$(this).fadeOut();
+			});

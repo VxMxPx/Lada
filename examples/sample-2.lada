@@ -1,0 +1,15 @@
+!DOCTYPE html
+html
+	head
+		meta:charset="utf-8"
+		link:rel="icon":type="image+png":href="http://avrelia.com/theme/favicon.png"
+		title Hello From Simple Lada!
+	body
+		= "Hello world!"
+		.box
+			- if $user->loggedin()
+				p You're allowed to enter!
+			- else
+				p You're *not* allowed to enter!
+				p "Hi there" \{How are you?\}!
+					a:href="#login" login here

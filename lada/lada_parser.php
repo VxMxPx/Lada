@@ -28,6 +28,9 @@ class LadaParser
 	# Last end tag
 	protected $lastEndTag = false;
 
+	# Ignore current content? Can be (int) parent level or false
+	protected $ignore = false;
+
 
 	/**
 	 * Require array of lada code
@@ -97,6 +100,17 @@ class LadaParser
 			# Determine indentation level
 			$level = $this->getIndentation($ladaLine);
 
+			if ($this->ignore !== false) {
+				# Break it here
+				if ($this->ignore >= $level) {
+					$this->ignore = false;
+				}
+				else {
+					$parsed[] = str_repeat("  ", $level) . $ladaLine;
+					continue;
+				}
+			}
+
 			# Is level less or the same as current?
 			if (is_array($this->levels) && !empty($this->levels)) {
 				foreach ($this->levels as $preLevel => $endTag) {
@@ -115,6 +129,12 @@ class LadaParser
 
 			# Trim extra spaces
 			$ladaLine = ltrim($ladaLine);
+
+			# Check if we have non-parsable content inside the tag (\\)
+			if (substr($ladaLine, -2, 2) === '\\\\') {
+				$this->ignore = $level;
+				$ladaLine = substr($ladaLine, 0, -2);
+			}
 
 			# Check if we have one long line (end like \)
 			if (substr($ladaLine, -1, 1) === '\\') {
@@ -135,8 +155,8 @@ class LadaParser
 			}
 
 			# If we have prefix | we leave it as it is, no changes
-			if (substr($ladaLine, 0, 1) === '|') {
-				$parsed[] = substr($ladaLine, 1);
+			if (substr($ladaLine, 0, 2) === '| ') {
+				$parsed[] = str_repeat("  ", $level) . substr($ladaLine, 2);
 				continue;
 			}
 
@@ -152,6 +172,13 @@ class LadaParser
 						$matchResult = $mObj->$mMet($match);
 						# Replace start tag
 						$ladaLine = $matchResult['open'];
+
+						# Should we ignore inner content? (Ignore won't be reseted)
+						if ($this->ignore === false) {
+							if (isset($matchResult['ignore']) && $matchResult['ignore'] === true) {
+								$this->ignore = $level;
+							}
+						}
 
 						# Store end tag for then we change indentation
 						$this->levels[$level] = $matchResult['end'];
