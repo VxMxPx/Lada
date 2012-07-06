@@ -1,0 +1,46 @@
+!doctype html
+html:lang="en"
+head
+	meta:charset="utf-8"
+	title {Cfg::Get('bugless/project_name')}
+	meta:name="description":content="An Open Source Bug Tracker."
+	meta:name="author":content="Marko Gajst"
+	link:rel="stylesheet":type="text/css":media="screen":href={url('/themes/brown/main.css')}
+	link:rel="icon":type="image/png":href={url('/themes/favicon.png')}
+	- cHTML::GetHeaders()
+body
+	script
+		document.getElementByTagName('body')[0].className = 'js';
+	- if uMessages::Exists()
+		#messages
+			= uMessages::Get(false)
+	#master
+		#bucket
+			#navigation_top
+				.left
+					h1 > a:href={url(allow('dashboard') ? '' : 'bug/list')} {Cfg::Get('bugless/project_name')}
+					- if allow('is_admin')
+						a.link_outside:href={url('settings')} > small {l('SETTINGS')}
+				.right
+					- if loggedin()
+						a.link_outside:href={url('profile')} > small {l('HI_USER', userInfo('full_name|uname'))}
+						a.link_outside:href={url('logout')} > small {l('LOGOUT')}
+					- else
+						a.link_outside:href={url('login')} > small {l('LOGIN')}
+						- if allow('register')
+							a.link_outside:href={url('register')} > small {l('REGISTER_ACCOUNT')}
+			#navigation_main
+				.left
+					- if allow('dashboard')
+						a.link_outside.{!Input::Get(0) ? ' active' : ''}:href={url()} {l('DASHBOARD')}
+					a.link_outside.{Input::Get(0) === 'bug'       ? ' active' : ''}:href={url('bug/list')} {l('BUGS')}
+					a.link_outside.{Input::Get(0) === 'milestone' ? ' active' : ''}:href={url('milestone/list')} {l('MILESTONES')}
+					a.link_outside.{Input::Get(0) === 'blueprint' ? ' active' : ''}:href={url('blueprint/list')} {l('BLUEPRINTS')}
+					a.link_outside.{Input::Get(0) === 'page'      ? ' active' : ''}:href={url('page/list')} {l('PAGES')}
+				.right
+					form#find.outside:action={url('find')}:method="post"
+						input:type="text":name="find":placeholder={l('FIND')}
+						button:type="submit" > span {l('FIND')}
+						<button type="submit"><span><?php le('FIND'); ?></span></button>
+	span.about Bugless: An Open Source Bug Tracker by Avrelia
+	- cHTML::GetFooters()
