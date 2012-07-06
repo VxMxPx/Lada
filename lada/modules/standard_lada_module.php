@@ -90,7 +90,7 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 
 		# Do we have simple tag?
 		if (substr($tag, 0, 1) === '=') {
-			return $this->phpReturner('echo ' . substr($tag, 2));
+			return $this->phpReturner('echo ' . substr($tag, 2) . ';');
 		}
 
 		# Do we have else?
@@ -101,7 +101,7 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 		# Process furthermore
 		if (preg_match(
 				'/^- (if|foreach|for|dowhile|do while|else if|elseif|elif) (.+)/i', 
-				$tag, $match) !== false) {
+				$tag, $match)) {
 			if ($match[1] === 'dowhile' || $match[1] === 'do while') {
 				return $this->phpReturner('do {', '} while(' . $match[2] . ');');
 			}
@@ -128,7 +128,7 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 	{
 		return array(
 			'open'   => '<?php ' . $phpTag . ' ?>',
-			'end'    => '<?php ' . $endTag . ' ?>',
+			'end'    => $endTag ? '<?php ' . $endTag . ' ?>' : false,
 			'ignore' => false
 		);
 	}
@@ -149,7 +149,7 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 		$tag = preg_replace_callback('/"(.*?)"/', array($this, 'encodeQuotes'), $tag);
 
 		# Encode any scripts calls
-		$tag = preg_replace_callback('/(?<!\\\){(.+)(?<!\\\)}/', array($this, 'encodeScript'), $tag);
+		$tag = preg_replace_callback('/(?<!\\\){(.+?)(?<!\\\)}/', array($this, 'encodeScript'), $tag);
 
 		# Now we can break it at first space (if exists)
 		$tagToTwo = explode(' ', $tag, 2);
@@ -174,31 +174,75 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 			throw new LadaException('Invalid tag definition: ' . $tag, 1);
 		}
 
-		# Get classes
-		preg_match_all('/\.([a-zA-Z0-9_\-]+)/', $tagSelf, $classes);
-		$classes = isset($classes[1]) && !empty($classes[1]) ? 'class="'.implode(' ', $classes[1]).'"' : false;
+		# Will remove pure tag tag from list
+		if (substr($tagSelf, 0, strlen($pureTag)) === $pureTag) {
+			$tagSelf = substr($tagSelf, strlen($pureTag));
+		}
 
-		# Get id
-		preg_match('/#([a-zA-Z0-9_\-]+)/', $tagSelf, $id);
-		$id = isset($id[1]) && !empty($id[1]) ? 'id="'.$id[1].'"' : false;
+		# Now we'll get all classes, ids and atteibutes :)
+		$classes = array();
+		$id = '';
+		$attributes = array();
 
-		# Get attributes
-		$attr = explode(':', $tagSelf);
-		unset($attr[0]);
-		if ($classes) $attr[] = $classes;
-		if ($id)      $attr[] = $id;
-		$attr = implode(' ', $attr);
+		$currentType = false;
+		$currentValue = '';
+		
+		if (!empty($tagSelf)) {
+			# We set +1 since we wanna register last item also
+			for ($i=0; $i < strlen($tagSelf)+1; $i++) {
+				if (!isset($tagSelf[$i]) || in_array($tagSelf[$i], array('.', ':', '#'))) {
+					if ($currentType === 'class') {
+						$classes[] = $currentValue;
+					}
+					elseif ($currentType === 'id') {
+						$id = $currentValue;
+					}
+					elseif ($currentType === 'attribute') {
+						$attributes[] = $currentValue;
+					}
+					$currentValue = '';
+
+					# Break out here
+					if (!isset($tagSelf[$i])) {
+						break;
+					}
+
+					if ($tagSelf[$i] === '.') $currentType = 'class';
+					if ($tagSelf[$i] === '#') $currentType = 'id';
+					if ($tagSelf[$i] === ':') $currentType = 'attribute';
+
+					continue;
+				}
+				$currentValue .= $tagSelf[$i];
+			}
+		}
+
+		# Connect classes, id, attributes
+		$classes = !empty($classes) ? 'class="'.implode(' ', $classes).'"' : false;
+		$id = !empty($id) ? 'id="'.$id.'"' : false;
+		$attr = !empty($attributes) ? implode(' ', $attributes) : '';
 
 		# Restore attributes now...
-		$attr = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $attr);
-		$attr = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScript'), $attr);
-
-		# ... and tag text!
-		$tagText = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $tagText);
-		$tagText = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScript'), $tagText);
+		if ($attr) {
+			$attr = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $attr);
+			$attr = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScriptAttr'), $attr);
+		}
 
 		# Build tag
-		$finalTag = '<' . $pureTag . ($attr ? ' ' . $attr : '') . (in_array($pureTag, $this->selfClosingTags) ? ' />' : '>' . $tagText);
+		$finalTag = 
+			'<' . 
+			$pureTag . 
+			($id ? ' ' . $id : '') .
+			($classes ? ' ' . $classes : '') .
+			($attr ? ' ' . $attr : '') . 
+			(in_array($pureTag, $this->selfClosingTags) ? ' />' : '>' . $tagText);
+
+		# Restore the rest of tag
+		$finalTag = preg_replace_callback('/QUTENCS_(.*?)_QUTENCS/', array($this, 'decodeQuotes'), $finalTag);
+		$finalTag = preg_replace_callback('/SCRENCS_(.*?)_SCRENCS/', array($this, 'decodeScript'), $finalTag);
+
+		# Restore some \{
+		$finalTag = str_replace(array('\{', '\}'), array('{', '}'), $finalTag);
 
 		# Finally return tag
 		return array(
@@ -237,10 +281,17 @@ class StandardLadaModule extends LadaModule implements LadaModuleInterface
 			$script = 'echo ' . $script;
 		}
 
-		$return = '"<?php ';
+		$return = '<?php ';
 		$return .= $script;
-		$return .= '; ?>"';
+		$return .= '; ?>';
 
 		return $return;
+	}
+
+	# Helper method to decode script (PHP) in attributes
+	protected function decodeScriptAttr($match)
+	{
+		$return = $this->decodeScript($match);
+		return '"' . $return . '"';
 	}
 }

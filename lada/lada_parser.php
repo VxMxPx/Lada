@@ -16,6 +16,9 @@ class LadaParser
 	# Indentation type (could be one tab "\t", two spaces "  "), the system will figure it out itself
 	protected $indentation = false;
 
+	# What type of indentation to use when generating HTML
+	protected $outputIndentation = "\t";
+
 	# List of levels
 	protected $levels = array();
 
@@ -97,6 +100,11 @@ class LadaParser
 		$parsed = array();
 
 		foreach ($this->ladaCode as $ladaLine) {
+			# This will stop parser immediately
+			if (trim($ladaLine) === '!!STOP') {
+				break;
+			}
+
 			# Determine indentation level
 			$level = $this->getIndentation($ladaLine);
 
@@ -106,7 +114,7 @@ class LadaParser
 					$this->ignore = false;
 				}
 				else {
-					$parsed[] = str_repeat("  ", $level) . $ladaLine;
+					$parsed[] = str_repeat($this->outputIndentation, $level) . $ladaLine;
 					continue;
 				}
 			}
@@ -115,13 +123,15 @@ class LadaParser
 			if (is_array($this->levels) && !empty($this->levels)) {
 				foreach ($this->levels as $preLevel => $endTag) {
 					if ($preLevel >= $level) {
-						if ($endTag === $this->lastEndTag) {
-							$lk = count($parsed) - 1;
-							$parsed[$lk] .= $endTag;
-						}
-						else {
-							$parsed[] = str_repeat("  ", $preLevel) . $endTag;
-						}
+						//if ($this->lastEndTag && $endTag)  {
+							if ($endTag === $this->lastEndTag) {
+								$lk = count($parsed) - 1;
+								$parsed[$lk] .= $endTag;
+							}
+							else {
+								$parsed[] = str_repeat($this->outputIndentation, $preLevel) . $endTag;
+							}
+						//}
 						unset($this->levels[$preLevel]);
 					}
 				}
@@ -156,7 +166,7 @@ class LadaParser
 
 			# If we have prefix | we leave it as it is, no changes
 			if (substr($ladaLine, 0, 2) === '| ') {
-				$parsed[] = str_repeat("  ", $level) . substr($ladaLine, 2);
+				$parsed[] = str_repeat($this->outputIndentation, $level) . substr($ladaLine, 2);
 				continue;
 			}
 
@@ -191,7 +201,7 @@ class LadaParser
 				}
 			}
 
-			$parsed[] = str_repeat("  ", $level) . $ladaLine;
+			$parsed[] = str_repeat($this->outputIndentation, $level) . $ladaLine;
 		}
 
 		# Close all open tags
@@ -202,7 +212,7 @@ class LadaParser
 					$parsed[$lk] .= $endTag;
 				}
 				else {
-					$parsed[] = str_repeat("  ", $ki) . $endTag;
+					$parsed[] = str_repeat($this->outputIndentation, $ki) . $endTag;
 				}
 			}
 		}
