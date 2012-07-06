@@ -1,27 +1,27 @@
-Lada is markup language highly inspired by HAML and Jade. The language is parsed into HTML + PHP.
-Please see examples bellow.
+= Lada
+Lada is markup language highly inspired by HAML and Jade. The .lada files are parsed to HTML + PHP.
 
+= Quick example
 <pre>
 !DOCTYPE html
 html
 	head
 		meta:charset="utf-8"
 		title Hello world
-		meta:name="description":content="Web Designer &amp; Web Developer, Maribor Slovenia"
+		meta:name="description":content="Sample website title!"
 		meta:name="keywords":content="marko, gajst, web development, developer"
 		meta:name="author":content="Marko Gajst"
-		link:href="http://fonts.googleapis.com/css?family=Ubuntu:300,500,700&amp;subset=cyrillic,latin-ext,latin":rel="stylesheet":type="text/css"
-		link:rel="stylesheet":type="text/css":media="screen":href="http://avrelia.com/theme/main.css"
-		link:rel="icon":type="image/png":href="http://avrelia.com/theme/favicon.png"
+		link:rel="stylesheet":type="text/css":media="screen":href="main.css"
+		link:rel="icon":type="image/png":href="favicon.png"
 		script
-			var _gaq = _gaq || [];
-			_gaq.push(['_setAccount', 'UA-5934458-1']);
-			_gaq.push(['_trackPageview']);
-			(function() {
-			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-			})();
+			$('h1').on('click', function() {
+				console.log('Hello world!');
+			})
+		style
+			#header {
+				float: left;
+				background-color: red;
+			}
 	body
 		h1 Hi there, how are you?
 		h2
@@ -34,7 +34,7 @@ html
 			li > a:href="http://google.com" Google
 			li > a:href="http://yahoo.com" Yahoo
 
-		Hello world!! :)
+		| Hello world!! :)
 
 		#page.wide
 			#header
@@ -47,19 +47,4 @@ html
 			p.logout
 				| You can
 				a:href={url('logout/id='.$id)} logout here!
-
-		- $name = 'Maya'
-		- function upper($str)
-			- $str = strtoupper($str)
-			- return $str
-		= upper($name)
-
-		script
-			$('.user').fadeOut('fast');
-
-		style
-			#header {
-				float: left;
-				background-color: red;
-			}
 </pre>
