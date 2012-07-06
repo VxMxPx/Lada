@@ -2,6 +2,10 @@ What's Lada?
 ====
 Lada is markup language highly inspired by HAML and Jade. The .lada files are parsed to HTML + PHP.
 
+Warning!!
+===
+Lada is **not ready** yet, but it will be soon, so stick around.
+
 Quick example
 ====
 <pre>
