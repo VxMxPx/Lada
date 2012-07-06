@@ -118,6 +118,8 @@ class LadaParser
 				}
 				else {
 					$parsed[] = $this->putIndentation($level) . $ladaLine;
+					# We need to reset last end tag here
+					$this->lastEndTag = false;
 					continue;
 				}
 			}
@@ -133,6 +135,7 @@ class LadaParser
 						else {
 							$parsed[] = $this->putIndentation($preLevel) . $endTag;
 						}
+						$this->lastEndTag = false;
 						unset($this->levels[$preLevel]);
 					}
 				}
@@ -141,10 +144,12 @@ class LadaParser
 			# Trim extra spaces
 			$ladaLine = ltrim($ladaLine);
 
-			# Check if we have non-parsable content inside the tag (\\)
+			# Check if we have no-parse content inside the tag (\\)
 			if (substr($ladaLine, -2, 2) === '\\\\') {
 				$this->ignore = $level;
 				$ladaLine = substr($ladaLine, 0, -2);
+				# We continue parsing here because we'll still need 
+				# to convert this line to HTML, and ignoring starts on next line.
 			}
 
 			# Check if we have one long line (end like \)
@@ -167,11 +172,14 @@ class LadaParser
 			# If we have prefix | we leave it as it is, no changes
 			if (substr($ladaLine, 0, 2) === '| ') {
 				$parsed[] = $this->putIndentation($level) . substr($ladaLine, 2);
+				# We need to reset last end tag here
+				$this->lastEndTag = false;
 				continue;
 			}
 
 			# Loop through the registered tags
-			foreach ($this->register as $pattern => $opt) {
+			foreach ($this->register as $pattern => $opt)
+			{
 				# Do we have a match?
 				if (preg_match($pattern, $ladaLine, $match) === 1) {
 					$mObj = $opt[0];
@@ -192,8 +200,9 @@ class LadaParser
 
 						# Store end tag for then we change indentation
 						$this->levels[$level] = $matchResult['end'];
-						$this->lastEndTag = $matchResult['end'];
+						$this->lastEndTag     = $matchResult['end'];
 						krsort($this->levels);
+						break;
 					}
 					else {
 						trigger_error('Costume method not callable: {$mObj}->{$mMet}', E_USER_WARNING);
@@ -214,6 +223,7 @@ class LadaParser
 				else {
 					$parsed[] = $this->putIndentation($ki) . $endTag;
 				}
+				$this->lastEndTag = false;
 			}
 		}
 

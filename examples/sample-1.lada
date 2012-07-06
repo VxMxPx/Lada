@@ -23,8 +23,7 @@ html
 			li > a:href="#" Three
 		script:src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"
 		#one
-			#two
-				Three
+			#two Three
 		script
 			$('h1').on('click', function() {
 				$(this).fadeOut();
