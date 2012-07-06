@@ -1,7 +1,9 @@
-= Lada
+What's Lada?
+====
 Lada is markup language highly inspired by HAML and Jade. The .lada files are parsed to HTML + PHP.
 
-= Quick example
+Quick example
+====
 <pre>
 !DOCTYPE html
 html
