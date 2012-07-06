@@ -17,7 +17,7 @@ class LadaParser
 	protected $indentation = false;
 
 	# What type of indentation to use when generating HTML
-	protected $outputIndentation = "\t";
+	protected $outputIndentation = '';
 
 	# List of levels
 	protected $levels = array();
@@ -72,6 +72,9 @@ class LadaParser
 		foreach ($this->ladaCode as $ladaLine) {
 			if (preg_match('/^(\t|[ ])+/', $ladaLine, $match) === 1) {
 				$this->indentation = $match[0];
+				if (empty($this->outputIndentation)) {
+					$this->outputIndentation = $this->indentation;
+				}
 				return;
 			}
 		}
@@ -108,13 +111,13 @@ class LadaParser
 			# Determine indentation level
 			$level = $this->getIndentation($ladaLine);
 
+			# Should we ignore following lines?
 			if ($this->ignore !== false) {
-				# Break it here
 				if ($this->ignore >= $level) {
 					$this->ignore = false;
 				}
 				else {
-					$parsed[] = str_repeat($this->outputIndentation, $level) . $ladaLine;
+					$parsed[] = $this->putIndentation($level) . $ladaLine;
 					continue;
 				}
 			}
@@ -123,15 +126,13 @@ class LadaParser
 			if (is_array($this->levels) && !empty($this->levels)) {
 				foreach ($this->levels as $preLevel => $endTag) {
 					if ($preLevel >= $level) {
-						//if ($this->lastEndTag && $endTag)  {
-							if ($endTag === $this->lastEndTag) {
-								$lk = count($parsed) - 1;
-								$parsed[$lk] .= $endTag;
-							}
-							else {
-								$parsed[] = str_repeat($this->outputIndentation, $preLevel) . $endTag;
-							}
-						//}
+						if ($endTag === $this->lastEndTag) {
+							$lk = count($parsed) - 1;
+							$parsed[$lk] .= $endTag;
+						}
+						else {
+							$parsed[] = $this->putIndentation($preLevel) . $endTag;
+						}
 						unset($this->levels[$preLevel]);
 					}
 				}
@@ -154,7 +155,6 @@ class LadaParser
 				else {
 					$this->currentLine .= substr($ladaLine, 0, -1);
 				}
-
 				continue;
 			}
 
@@ -166,7 +166,7 @@ class LadaParser
 
 			# If we have prefix | we leave it as it is, no changes
 			if (substr($ladaLine, 0, 2) === '| ') {
-				$parsed[] = str_repeat($this->outputIndentation, $level) . substr($ladaLine, 2);
+				$parsed[] = $this->putIndentation($level) . substr($ladaLine, 2);
 				continue;
 			}
 
@@ -201,7 +201,7 @@ class LadaParser
 				}
 			}
 
-			$parsed[] = str_repeat($this->outputIndentation, $level) . $ladaLine;
+			$parsed[] = $this->putIndentation($level) . $ladaLine;
 		}
 
 		# Close all open tags
@@ -212,7 +212,7 @@ class LadaParser
 					$parsed[$lk] .= $endTag;
 				}
 				else {
-					$parsed[] = str_repeat($this->outputIndentation, $ki) . $endTag;
+					$parsed[] = $this->putIndentation($ki) . $endTag;
 				}
 			}
 		}
@@ -232,13 +232,25 @@ class LadaParser
 		$inLength = strlen($this->indentation);
 		$lnLength = strlen($line);
 
-		for($i=0; $i<$lnLength; $i++) {
+		for($i=0; $i<$lnLength; $i=$i+$inLength) {
 			if (substr($line, $i, $inLength) !== $this->indentation) {
 				break;
 			}
 		}
 
-		$line = substr($line, $i * $inLength);
-		return $i;
+		$line = substr($line, $i);
+		return $i / $inLength;
+	}
+
+	/**
+	 * Calculate indentation for current level
+	 * --
+	 * @param  integer $currentLevel
+	 * --
+	 * @return string
+	 */
+	protected function putIndentation($currentLevel)
+	{
+		return str_repeat($this->outputIndentation, $currentLevel);
 	}
 }
